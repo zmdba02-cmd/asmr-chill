@@ -1,0 +1,27 @@
+{
+  "name": "asmr-next",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend pribadi untuk API asmr.one (Next.js + TypeScript). Hanya untuk pemakaian lokal.",
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1 -p 3000",
+    "typecheck": "tsc --noEmit",
+    "start:cloud": "next start -H 0.0.0.0 -p ${PORT:-3000}"
+  },
+  "dependencies": {
+    "next": "^16.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
