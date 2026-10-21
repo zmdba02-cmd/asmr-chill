@@ -11,6 +11,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { coverUrl } from "@/lib/format";
+import { useTitles } from "@/lib/titles";
 import { clearPosition, readPosition, savePosition } from "@/lib/positions";
 import { markWatchDone, updateWatchProgress } from "@/lib/watchLater";
 import type { AudioNode, Work } from "@/lib/types";
@@ -45,6 +46,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [speed, setSpeed] = useState(1);
   const [sleepMin, setSleepMin] = useState(0);
   const [error, setError] = useState("");
+  const nowWork = useMemo(() => (currentWork ? [currentWork] : []), [currentWork]);
+  const t = useTitles(nowWork); // judul karya di bar bawah ikut bahasa terpilih
 
   const play = useCallback((node: AudioNode, queue: AudioNode[], work?: Work) => {
     const audio = audioRef.current;
@@ -128,7 +131,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           {currentWork && <img className="np-cover" src={coverUrl(currentWork.id)} alt="" />}
           <span className="np-text">
             <span className="now">{current?.title ?? "—"}</span>
-            {current?.workTitle && <span className="meta np-work">{current.workTitle}</span>}
+            {(currentWork || current?.workTitle) && (
+              <span className="meta np-work">{currentWork ? t(currentWork) : current?.workTitle}</span>
+            )}
           </span>
           <span className="np-open">Detail ⌃</span>
         </button>

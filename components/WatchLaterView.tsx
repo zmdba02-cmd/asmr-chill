@@ -4,8 +4,9 @@
 //  - Tonton nanti   : karya yang belum selesai, dengan track & menit terakhir + tombol Lanjutkan.
 //  - Sudah ditonton : riwayat karya yang sudah selesai, supaya tidak lupa mana yang pernah didengar.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { coverUrl, fmtTime } from "@/lib/format";
+import { useTitles } from "@/lib/titles";
 import { fetchResumeTarget, useWatchLater, type WatchEntry } from "@/lib/watchLater";
 import type { Work } from "@/lib/types";
 import { usePlayer } from "./PlayerProvider";
@@ -25,6 +26,8 @@ export function WatchLaterView() {
   const [error, setError] = useState("");
 
   const list = tab === "later" ? later : done;
+  const works = useMemo(() => [...later, ...done].map((e) => e.work), [later, done]);
+  const t = useTitles(works);
 
   async function resume(entry: WatchEntry) {
     setBusyId(entry.work.id);
@@ -66,7 +69,9 @@ export function WatchLaterView() {
             <article key={e.work.id} className="wl-item">
               <img className="cover" loading="lazy" src={coverUrl(e.work.id)} alt="" onClick={() => setSelected(e.work)} />
               <div className="wl-body">
-                <div className="title">{e.work.title}</div>
+                <div className="title" title={e.work.title}>
+                  {t(e.work)}
+                </div>
                 <div className="meta">{e.work.source_id}</div>
 
                 {tab === "later" ? (

@@ -5,22 +5,23 @@
 // Dibuka dari WorkGrid. Saat dibuka, ia meminta /api/tracks/<id> ke server kita.
 // =====================================================================
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtTime, coverUrl, tagName } from "@/lib/format";
 import { useFavorites } from "@/lib/favorites";
 import { pickAutoplayTarget } from "@/lib/autoplay";
 import { findResumeTarget, useWatchLater } from "@/lib/watchLater";
 import { useLang } from "@/lib/lang";
+import { isAudioTrack, isVideoFile } from "@/lib/media";
+import { useTitles } from "@/lib/titles";
 import type { AudioNode, OtherNode, TrackNode, Work } from "@/lib/types";
 import { usePlayer } from "./PlayerProvider";
 
 type Props = { work: Work | null; onClose: () => void; autoPlay?: boolean };
 
-// "Type guard": fungsi yang memberi tahu TypeScript bahwa node ini pasti AudioNode.
-const isAudio = (n: TrackNode): n is AudioNode => n.type === "audio";
-// Video omake (L2D dll.): file selain audio yang berakhiran format yang bisa diputar browser.
-const isVideo = (n: TrackNode): n is OtherNode =>
-  n.type !== "audio" && n.type !== "folder" && /\.(mp4|webm|m4v|mov)$/i.test(n.title);
+// Audio sungguhan (bukan video) dan file video. Aturan ada di lib/media.ts: file .mp4 selalu
+// dibuka di pemutar video, walaupun API menandainya sebagai "audio".
+const isAudio = isAudioTrack;
+const isVideo = (n: TrackNode): n is AudioNode | OtherNode => n.type !== "folder" && isVideoFile(n);
 
 export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -33,7 +34,11 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
   const entry = work ? watch.get(work.id) : undefined;
   const { play, current, pause } = usePlayer();
   const lang = useLang();
+  const workList = useMemo(() => (work ? [work] : []), [work]);
+  const t = useTitles(workList);
   const [video, setVideo] = useState<{ title: string; src: string } | null>(null);
+  const [videoError, setVideoError] = useState(false);
+  const videoPanel = useRef<HTMLDivElement>(null);
   const workId = work?.id;
   const tree = loaded && loaded.id === workId ? loaded.nodes : null;
 
@@ -51,6 +56,7 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
     const controller = new AbortController();
     setLoaded(null);
     setVideo(null);
+    setVideoError(false);
     setError("");
     fetch(`/api/tracks/${workId}`, { signal: controller.signal })
       .then(async (res) => {
@@ -69,11 +75,14 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
   }, [workId]);
 
   // Putar video lewat /stream (proxy lokal yang sama dengan audio, mendukung seek).
-  function openVideo(n: OtherNode) {
+  function openVideo(n: AudioNode | OtherNode) {
     const url = n.mediaStreamUrl || n.mediaDownloadUrl;
     if (!url) return;
     pause(); // hentikan audio supaya tidak tabrakan dengan suara video
+    setVideoError(false);
     setVideo({ title: n.title, src: `/stream?url=${encodeURIComponent(url)}` });
+    // Video muncul di atas daftar track: gulir ke sana supaya terlihat.
+    window.setTimeout(() => videoPanel.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   }
 
   // Putar otomatis saat karya dibuka dari daftar: lanjut dari track terakhir (kalau ada di
@@ -111,7 +120,8 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
             {/* <img> biasa dipakai (bukan next/image) karena sampul sudah lewat proxy lokal kita */}
             <img className="cover" src={coverUrl(work.id, "main")} alt="" />
             <div className="detail-info">
-              <h2>{work.title}</h2>
+              <h2>{t(work)}</h2>
+              {t(work) !== work.title && <div className="meta">{work.title}</div>}
               <div className="meta">
                 {work.name} · {work.source_id}
               </div>
@@ -163,14 +173,19 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
           {error && <p className="status err">Gagal memuat track: {error}</p>}
           {!error && tree === null && <p className="meta">Memuat daftar track…</p>}
           {video && (
-            <div className="video-panel">
+            <div className="video-panel" ref={videoPanel}>
               <div className="video-head">
                 <span>🎬 {video.title}</span>
                 <button type="button" aria-label="Tutup video" onClick={() => setVideo(null)}>
                   ✕
                 </button>
               </div>
-              <video key={video.src} src={video.src} controls autoPlay playsInline />
+              <video key={video.src} src={video.src} controls autoPlay playsInline onError={() => setVideoError(true)} />
+              {videoError && (
+                <p className="status err">
+                  Video gagal diputar. Mungkin codec-nya tidak didukung browser ini, atau link kedaluwarsa (buka ulang karyanya).
+                </p>
+              )}
             </div>
           )}
           {tree && (
@@ -193,7 +208,7 @@ type TreeProps = {
   depth: number;
   currentHash?: string;
   onPlay: (node: AudioNode, queue: AudioNode[]) => void;
-  onVideo: (node: OtherNode) => void;
+  onVideo: (node: AudioNode | OtherNode) => void;
 };
 
 // Menggambar folder & file secara rekursif (komponen memanggil dirinya sendiri untuk isi folder).
@@ -212,6 +227,14 @@ function TrackTree({ nodes, depth, currentHash, onPlay, onVideo }: TreeProps) {
             </details>
           );
         }
+        if (isVideo(node) && (node.mediaStreamUrl || node.mediaDownloadUrl)) {
+          return (
+            <button key={node.hash ?? `${node.title}-${i}`} type="button" className="track" onClick={() => onVideo(node)}>
+              <em>🎬 {node.title}</em>
+              <span>{node.type === "audio" && node.duration ? fmtTime(node.duration) : "video"}</span>
+            </button>
+          );
+        }
         if (isAudio(node)) {
           return (
             <button
@@ -222,14 +245,6 @@ function TrackTree({ nodes, depth, currentHash, onPlay, onVideo }: TreeProps) {
             >
               <em>▶ {node.title}</em>
               <span>{fmtTime(node.duration)}</span>
-            </button>
-          );
-        }
-        if (isVideo(node) && (node.mediaStreamUrl || node.mediaDownloadUrl)) {
-          return (
-            <button key={node.hash ?? `${node.title}-${i}`} type="button" className="track" onClick={() => onVideo(node)}>
-              <em>🎬 {node.title}</em>
-              <span>video</span>
             </button>
           );
         }

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { coverUrl, fmtTime, tagName } from "@/lib/format";
 import { useLang } from "@/lib/lang";
 import { learnTags } from "@/lib/tagDict";
+import { useTitles } from "@/lib/titles";
 import type { Work } from "@/lib/types";
 import { WorkDialog } from "./WorkDialog";
 
@@ -15,6 +16,7 @@ type Props = { works: Work[]; emptyText?: string };
 export function WorkGrid({ works, emptyText = "Tidak ada hasil." }: Props) {
   const [selected, setSelected] = useState<Work | null>(null);
   const lang = useLang();
+  const t = useTitles(works); // judul sesuai bahasa terpilih
 
   // Setiap karya yang tampil "mengajari" kamus tag, jadi saran tag makin lengkap dengan sendirinya.
   useEffect(() => {
@@ -40,7 +42,9 @@ export function WorkGrid({ works, emptyText = "Tidak ada hasil." }: Props) {
             {/* <img> biasa: sampul sudah lewat proxy lokal kita */}
             <img className="cover" loading="lazy" src={coverUrl(w.id)} alt="" />
             <div className="body">
-              <div className="title">{w.title}</div>
+              <div className="title" title={w.title}>
+                {t(w)}
+              </div>
               <div className="meta">
                 {w.source_id} {w.rate_average_2dp ? `★ ${w.rate_average_2dp}` : ""}
                 {w.duration ? ` · ${fmtTime(w.duration)}` : ""}

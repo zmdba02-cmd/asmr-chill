@@ -4,9 +4,8 @@
 // pakai file audio pertama yang ketemu. Antreannya = file dengan format itu di folder yang sama.
 // =====================================================================
 
+import { isAudioTrack as isAudio } from "./media";
 import type { AudioNode, TrackNode } from "./types";
-
-const isAudio = (n: TrackNode): n is AudioNode => n.type === "audio";
 
 // Format file dari akhiran nama ("01 Intro.wav" -> "wav"); cadangan: dari alamat unduhan.
 function ext(n: AudioNode): string {

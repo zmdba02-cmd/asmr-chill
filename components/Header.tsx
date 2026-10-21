@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccountBar } from "./AccountBar";
 import { BlurToggle } from "./BlurToggle";
 import { LangToggle } from "./LangToggle";
 
@@ -14,6 +15,7 @@ export function Header() {
         <Link href="/favorites">★ Favorit</Link>
         <LangToggle />
         <BlurToggle />
+        <AccountBar />
       </nav>
     </header>
   );

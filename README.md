@@ -2,7 +2,7 @@
 
 Frontend pribadi untuk API asmr.one, dibuat ulang dengan **Next.js 16 (App Router)**, **React 19**, dan **TypeScript**. Fitur: daftar karya + pagination, pencarian, **filter tag (sertakan / kecualikan, mode AND atau OR)**, urutan, filter subtitle, detail karya, pohon track, pemutar (seek, kecepatan, timer tidur, lanjut dari posisi terakhir, tombol media di layar kunci HP), favorit, dan blur sampul.
 
-> **Hanya untuk dipakai pribadi di komputermu sendiri. Jangan di-deploy ke hosting publik.**
+> **Untuk pemakaian pribadi.** Kalau di-host online, wajib isi `APP_PASSWORD` (lihat bagian "Di-host online").
 
 ---
 
@@ -47,9 +47,9 @@ Proxy untuk daftar karya dan pencarian **tidak diperlukan lagi**: karena dipangg
 ## 3. Konsep Next.js yang dipakai (baca sekali)
 
 **App Router.** Struktur folder `app/` = struktur alamat web.
-- `app/page.tsx` → halaman `/`
-- `app/favorites/page.tsx` → halaman `/favorites`
-- `app/layout.tsx` → bungkus semua halaman (header + pemutar ada di sini)
+- `app/(main)/page.tsx` → halaman `/` (folder `(main)` tidak ikut jadi alamat)
+- `app/(main)/favorites/page.tsx` → halaman `/favorites`
+- `app/(main)/layout.tsx` → header + pemutar; `app/login/page.tsx` → halaman login (tanpa header)
 - `app/api/tracks/[id]/route.ts` → endpoint `GET /api/tracks/123` (`[id]` = bagian yang berubah-ubah)
 
 **Server Component vs Client Component.** Ini konsep terpenting.
@@ -175,8 +175,7 @@ localStorage tetap dipakai sebagai cache. Efeknya:
 - Untuk backup, salin folder `data/`. Folder lain bisa dipilih lewat variabel lingkungan `DATA_DIR`.
 - Data lama di localStorage otomatis diunggah sekali ke server saat pertama kali dibuka.
 - Pengaturan tampilan (blur, bahasa) tetap per-browser.
-- Di Vercel sistem file tidak permanen; kalau suatu hari di-deploy, ganti isi `readStore`/`writeStore`
-  di route itu dengan database.
+- Di hosting (Render, Vercel) sistem file tidak permanen; pakai Upstash Redis (lihat bagian "Di-host online").
 
 ## Buka dengan satu klik (Windows)
 
@@ -190,10 +189,30 @@ Server hanya bisa dibuka dari komputer ini (`127.0.0.1`), jadi tidak perlu login
 4. `berhenti.bat` mematikan server. Setelah mengubah kode, jalankan `setup.bat` lagi supaya
    perubahannya ikut ter-build.
 
-## Di-host online (opsional)
+## Di-host online (Render)
 
-Variabel lingkungan (lihat `.env.example`): `APP_PASSWORD` mengaktifkan login, dan
-`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` memindahkan penyimpanan data dari
-folder `data/` ke Upstash Redis. Di hosting, build dengan `npm install && npm run build`
-dan jalankan dengan `npm run start:cloud` (mendengarkan di `0.0.0.0` dan memakai `$PORT`).
-Tanpa variabel itu, aplikasi berperilaku seperti biasa di laptop.
+Build: `npm install && npm run build`  ·  Start: `npm run start:cloud`
+
+Isi di **Render > Environment** (lihat `.env.example`):
+
+| Variabel | Fungsi |
+|---|---|
+| `APP_PASSWORD` | Mengaktifkan halaman login `/login`. Tanpa ini, siapa pun yang tahu alamat situsmu bisa membuka dan mengubah data. Login berlaku 30 hari per perangkat; tombol **Keluar** ada di header. Mengganti password otomatis mengeluarkan semua perangkat. |
+| `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | **Wajib supaya favorit, Tonton nanti, dan posisi terakhir permanen.** Disk Render (paket gratis) dihapus tiap restart/deploy ulang. Buat database gratis di upstash.com (Redis), lalu salin dua nilai dari bagian *REST API*. |
+| `GOOGLE_TRANSLATE_API_KEY` | Opsional. Penerjemah judul resmi (Google Cloud Translation). Kalau kosong, dipakai endpoint web Google Translate yang tidak resmi. |
+
+Kalau konfigurasinya belum benar, header menampilkan peringatan **⚠ Data tidak permanen** / **⚠ Tanpa password**.
+
+Satu password = satu "akun": semua perangkat yang login melihat favorit & Tonton nanti yang sama.
+
+## Bahasa (JP / EN / 中)
+
+Tombol di header mengganti **nama tag dan judul karya**. JP = judul asli. EN dan 中 = terjemahan otomatis lewat `/api/translate`
+(`lib/titles.ts` di browser, `app/api/translate/route.ts` di server). Judul asli tetap tampil kecil di bawah judul
+terjemahan pada detail karya, dan muncul saat kursor diarahkan ke judul di kartu. Terjemahan disimpan di browser,
+jadi tidak diterjemahkan ulang. Nama file/folder track belum diterjemahkan.
+
+## Video (.mp4, .webm, .m4v, .mov)
+
+File video dikenali dari akhiran namanya (`lib/media.ts`) dan dibuka di pemutar video di dalam detail karya,
+bukan di pemutar audio. Kalau gagal, biasanya codec-nya (mis. HEVC) tidak didukung browser.

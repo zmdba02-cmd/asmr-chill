@@ -9,6 +9,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { compactWork } from "./favorites";
+import { isAudioTrack } from "./media";
 import { attachServerSync, pushToServer } from "./serverSync";
 import type { AudioNode, TrackNode, Work } from "./types";
 
@@ -167,7 +168,7 @@ export function useWatchLater() {
 }
 
 // ---- mencari track yang harus dilanjutkan di dalam pohon file ----
-const isAudio = (n: TrackNode): n is AudioNode => n.type === "audio";
+const isAudio = isAudioTrack;
 
 type Target = { node: AudioNode; queue: AudioNode[] };
 

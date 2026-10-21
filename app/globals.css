@@ -199,3 +199,11 @@ html:not([data-blur="off"]) .now-btn:hover .np-cover { filter: none; }
 .video-panel { margin: 12px 0; }
 .video-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
 .video-panel video { width: 100%; max-height: 70vh; background: #000; border-radius: 8px; }
+
+/* ---------- login & peringatan ---------- */
+.login { min-height: 100vh; display: grid; place-items: center; padding: var(--gap); }
+.login form { display: grid; gap: 12px; width: min(340px, 100%); background: var(--panel); border: 1px solid #2c2b3b; border-radius: var(--radius); padding: 24px; }
+.login h1 { margin: 0 0 4px; font-size: 20px; text-align: center; }
+.login .status { margin: 0; }
+.warn { font-size: 12px; color: #ffb86b; border: 1px solid #5a4630; border-radius: 8px; padding: 4px 8px; cursor: help; }
+.logout { display: inline; margin: 0; }
