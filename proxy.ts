@@ -18,12 +18,13 @@ export function proxy(req: NextRequest) {
   if (pathname.startsWith("/api/") || pathname === "/stream") {
     return Response.json({ error: "Perlu login" }, { status: 401 });
   }
-  // Halaman: arahkan ke /login. Alamat relatif dipakai sengaja (bukan NextResponse.redirect)
-  // supaya benar di belakang proxy hosting, yang kadang membuat host di req.url keliru.
-  return new NextResponse(null, {
-    status: 307,
-    headers: { Location: `/login?next=${encodeURIComponent(pathname + search)}` },
-  });
+  // Halaman: arahkan ke /login. Proxy Next.js menolak alamat relatif, jadi alamat lengkapnya dirakit
+  // dari header hosting (bukan dari req.url, yang di belakang proxy hosting bisa berisi host keliru).
+  const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? req.nextUrl.host).split(",")[0].trim();
+  const local = /^(localhost|127\.|\[::1\])/.test(host);
+  const proto = (req.headers.get("x-forwarded-proto") ?? (local ? "http" : "https")).split(",")[0].trim();
+  const to = new URL(`/login?next=${encodeURIComponent(pathname + search)}`, `${proto}://${host}`);
+  return NextResponse.redirect(to, 307);
 }
 
 // Semua alamat kecuali berkas statis bawaan Next.js.
