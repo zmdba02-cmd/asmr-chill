@@ -60,6 +60,35 @@ function merge(lang: TitleLang, add: Rec): void {
   listeners.forEach((notify) => notify());
 }
 
+// Terjemahan langsung dari browser (IP-mu sendiri). Dipakai kalau server gagal, karena IP hosting
+// kadang diblokir penyedia terjemahan sementara browser-mu tidak.
+async function browserTranslate(text: string, lang: TitleLang): Promise<string> {
+  const q = new URLSearchParams({ client: "gtx", sl: "auto", tl: lang === "zh" ? "zh-CN" : "en", dt: "t", q: text });
+  const res = await fetch(`https://translate.googleapis.com/translate_a/single?${q}`);
+  if (!res.ok) throw new Error(String(res.status));
+  const data = (await res.json()) as unknown;
+  const segments = Array.isArray(data) && Array.isArray(data[0]) ? (data[0] as unknown[]) : [];
+  return segments.map((x) => (Array.isArray(x) && typeof x[0] === "string" ? x[0] : "")).join("").trim();
+}
+
+async function fallbackInBrowser(lang: TitleLang, items: { id: number; title: string }[]): Promise<void> {
+  const BATCH = 4;
+  for (let i = 0; i < items.length; i += BATCH) {
+    const results = await Promise.all(
+      items.slice(i, i + BATCH).map(async (it) => {
+        try {
+          return [it.id, await browserTranslate(it.title, lang)] as const;
+        } catch {
+          return [it.id, ""] as const;
+        }
+      }),
+    );
+    const add: Rec = {};
+    for (const [id, text] of results) if (text) add[`w${id}`] = text;
+    if (Object.keys(add).length > 0) merge(lang, add);
+  }
+}
+
 async function flush(): Promise<void> {
   timer = undefined;
   const batches = [...waiting.entries()];
@@ -68,6 +97,7 @@ async function flush(): Promise<void> {
     const items = [...map.entries()].map(([id, title]) => ({ id, title }));
     for (let i = 0; i < items.length; i += CHUNK) {
       const chunk = items.slice(i, i + CHUNK);
+      let done = new Set<string>();
       try {
         const res = await fetch("/api/translate", {
           method: "POST",
@@ -79,9 +109,13 @@ async function flush(): Promise<void> {
         const add: Rec = {};
         for (const [id, text] of Object.entries(translations)) add[`w${id}`] = text;
         if (Object.keys(add).length > 0) merge(lang, add);
+        done = new Set(Object.keys(translations));
       } catch {
-        /* biarkan: judul asli tetap tampil; dicoba lagi setelah halaman dimuat ulang */
+        /* server gagal: lanjut ke cadangan di browser */
       }
+      // Yang belum terjemah (server gagal / semua penyedia server gagal) dicoba dari browser.
+      const missing = chunk.filter((c) => !done.has(String(c.id)));
+      if (missing.length > 0) await fallbackInBrowser(lang, missing);
     }
   }
 }
