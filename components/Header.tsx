@@ -11,6 +11,8 @@ export function Header() {
       </h1>
       <nav className="nav">
         <Link href="/">Jelajah</Link>
+        <Link href="/tags">🏷 Tag</Link>
+        <Link href="/playlists">📂 Playlist</Link>
         <Link href="/watch-later">🕒 Tonton nanti</Link>
         <Link href="/favorites">★ Favorit</Link>
         <LangToggle />

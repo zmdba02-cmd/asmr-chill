@@ -20,6 +20,8 @@ export function SearchBar({ defaults }: Props) {
   const [sub, setSub] = useState(defaults.sub);
   const [inc, setInc] = useState(defaults.inc);
   const [exc, setExc] = useState(defaults.exc);
+  const [va, setVa] = useState(defaults.va);
+  const [circle, setCircle] = useState(defaults.circle);
   const [mode, setMode] = useState<MatchMode>(defaults.mode);
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export function SearchBar({ defaults }: Props) {
   // Pindah ke URL baru. `next` menimpa nilai yang baru saja berubah (state React baru
   // berlaku di render berikutnya, jadi nilai terbaru kita kirim lewat sini).
   function go(next: Partial<Omit<Filters, "page">> = {}) {
-    const qs = filtersToParams({ q, order, sub, inc, exc, mode, ...next }).toString();
+    const qs = filtersToParams({ q, order, sub, inc, exc, va, circle, mode, ...next }).toString();
     router.push(qs ? `/?${qs}` : "/");
   }
 
@@ -64,6 +66,16 @@ export function SearchBar({ defaults }: Props) {
     const nextExc = exc.filter((t) => t !== name);
     setExc(nextExc);
     go({ exc: nextExc });
+  }
+  function removeVa(name: string) {
+    const next = va.filter((x) => x !== name);
+    setVa(next);
+    go({ va: next });
+  }
+  function removeCircle(name: string) {
+    const next = circle.filter((x) => x !== name);
+    setCircle(next);
+    go({ circle: next });
   }
   function changeMode(next: MatchMode) {
     setMode(next);
@@ -129,6 +141,27 @@ export function SearchBar({ defaults }: Props) {
         </div>
         <TagPicker title="Kecualikan tag" variant="exc" tags={exc} onAdd={addExc} onRemove={removeExc} />
       </div>
+
+      {(va.length > 0 || circle.length > 0) && (
+        <div className="chips scope">
+          {va.map((v) => (
+            <span key={`va-${v}`} className="chip" title="Pengisi suara">
+              🎤 {v}
+              <button type="button" aria-label={`Hapus pengisi suara ${v}`} onClick={() => removeVa(v)}>
+                ✕
+              </button>
+            </span>
+          ))}
+          {circle.map((c) => (
+            <span key={`circle-${c}`} className="chip" title="Circle">
+              🏢 {c}
+              <button type="button" aria-label={`Hapus circle ${c}`} onClick={() => removeCircle(c)}>
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
       {(inc.length > 0 || exc.length > 0) && (
         <button type="button" className="linklike" onClick={clearTags}>

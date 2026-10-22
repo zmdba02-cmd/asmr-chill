@@ -5,15 +5,17 @@
 // Dibuka dari WorkGrid. Saat dibuka, ia meminta /api/tracks/<id> ke server kita.
 // =====================================================================
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtTime, coverUrl, tagName } from "@/lib/format";
 import { useFavorites } from "@/lib/favorites";
 import { pickAutoplayTarget } from "@/lib/autoplay";
 import { findResumeTarget, useWatchLater } from "@/lib/watchLater";
 import { useLang } from "@/lib/lang";
-import { isAudioTrack, isVideoFile } from "@/lib/media";
+import { isAudioTrack, isImageFile, isVideoFile } from "@/lib/media";
 import { useTitles } from "@/lib/titles";
 import type { AudioNode, OtherNode, TrackNode, Work } from "@/lib/types";
+import { PlaylistPicker } from "./PlaylistPicker";
 import { usePlayer } from "./PlayerProvider";
 
 type Props = { work: Work | null; onClose: () => void; autoPlay?: boolean };
@@ -22,6 +24,9 @@ type Props = { work: Work | null; onClose: () => void; autoPlay?: boolean };
 // dibuka di pemutar video, walaupun API menandainya sebagai "audio".
 const isAudio = isAudioTrack;
 const isVideo = (n: TrackNode): n is AudioNode | OtherNode => n.type !== "folder" && isVideoFile(n);
+// Ilustrasi (jpg/png/dll.) yang punya alamat untuk ditampilkan.
+const isImage = (n: TrackNode): n is OtherNode => n.type !== "folder" && n.type !== "audio" && isImageFile(n) && Boolean(imageUrl(n));
+const imageUrl = (n: OtherNode): string | undefined => n.mediaStreamUrl || n.mediaDownloadUrl;
 
 export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -39,6 +44,8 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
   const [video, setVideo] = useState<{ title: string; src: string } | null>(null);
   const [videoError, setVideoError] = useState(false);
   const videoPanel = useRef<HTMLDivElement>(null);
+  const [gallery, setGallery] = useState<{ list: OtherNode[]; index: number } | null>(null);
+  const imagePanel = useRef<HTMLDivElement>(null);
   const workId = work?.id;
   const tree = loaded && loaded.id === workId ? loaded.nodes : null;
 
@@ -57,6 +64,7 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
     setLoaded(null);
     setVideo(null);
     setVideoError(false);
+    setGallery(null);
     setError("");
     fetch(`/api/tracks/${workId}`, { signal: controller.signal })
       .then(async (res) => {
@@ -83,6 +91,15 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
     setVideo({ title: n.title, src: `/stream?url=${encodeURIComponent(url)}` });
     // Video muncul di atas daftar track: gulir ke sana supaya terlihat.
     window.setTimeout(() => videoPanel.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+  }
+
+  // Buka ilustrasi; tombol ◀ ▶ berpindah antar gambar di folder yang sama.
+  function openImage(list: OtherNode[], index: number) {
+    setGallery({ list, index });
+    window.setTimeout(() => imagePanel.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+  }
+  function stepImage(delta: number) {
+    setGallery((g) => (g ? { ...g, index: (g.index + delta + g.list.length) % g.list.length } : g));
   }
 
   // Putar otomatis saat karya dibuka dari daftar: lanjut dari track terakhir (kalau ada di
@@ -122,15 +139,30 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
             <div className="detail-info">
               <h2>{t(work)}</h2>
               {t(work) !== work.title && <div className="meta">{work.title}</div>}
+              {/* Circle, pengisi suara, dan tag bisa diklik: membuka pencarian dengan filter itu */}
               <div className="meta">
-                {work.name} · {work.source_id}
+                {work.name && (
+                  <Link href={`/?circle=${encodeURIComponent(work.name)}`} className="inlink" title="Karya lain dari circle ini" onClick={onClose}>
+                    {work.name}
+                  </Link>
+                )}{" "}
+                · {work.source_id}
               </div>
-              <div className="meta">{work.vas?.map((v) => v.name).join(", ")}</div>
-              <div className="tags">
-                {work.tags?.map((t) => (
-                  <span key={t.id} className="tag">
-                    {tagName(t, lang)}
+              <div className="meta">
+                {work.vas?.map((v, i) => (
+                  <span key={v.id ?? v.name}>
+                    {i > 0 && ", "}
+                    <Link href={`/?va=${encodeURIComponent(v.name)}`} className="inlink" title="Karya lain dengan pengisi suara ini" onClick={onClose}>
+                      {v.name}
+                    </Link>
                   </span>
+                ))}
+              </div>
+              <div className="tags">
+                {work.tags?.map((tg) => (
+                  <Link key={tg.id} href={`/?inc=${encodeURIComponent(tg.name)}`} className="tag" title="Cari karya dengan tag ini" onClick={onClose}>
+                    {tagName(tg, lang)}
+                  </Link>
                 ))}
               </div>
               <div>
@@ -162,6 +194,7 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
                   </>
                 )}
               </div>
+              <PlaylistPicker work={work} />
               {work.source_url && (
                 <a href={work.source_url} target="_blank" rel="noopener noreferrer">
                   Halaman DLsite ↗
@@ -188,6 +221,36 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
               )}
             </div>
           )}
+          {gallery && (
+            <div className="image-panel" ref={imagePanel}>
+              <div className="video-head">
+                <span>
+                  🖼 {gallery.list[gallery.index].title} ({gallery.index + 1}/{gallery.list.length})
+                </span>
+                <span>
+                  {gallery.list.length > 1 && (
+                    <>
+                      <button type="button" aria-label="Gambar sebelumnya" onClick={() => stepImage(-1)}>
+                        ◀
+                      </button>{" "}
+                      <button type="button" aria-label="Gambar berikutnya" onClick={() => stepImage(1)}>
+                        ▶
+                      </button>{" "}
+                    </>
+                  )}
+                  <button type="button" aria-label="Tutup gambar" onClick={() => setGallery(null)}>
+                    ✕
+                  </button>
+                </span>
+              </div>
+              <img
+                key={imageUrl(gallery.list[gallery.index])}
+                className="illust"
+                src={`/stream?url=${encodeURIComponent(imageUrl(gallery.list[gallery.index]) ?? "")}`}
+                alt={gallery.list[gallery.index].title}
+              />
+            </div>
+          )}
           {tree && (
             <TrackTree
               nodes={tree}
@@ -195,6 +258,7 @@ export function WorkDialog({ work, onClose, autoPlay = false }: Props) {
               currentHash={current?.hash}
               onPlay={(n, q) => play(n, q, work)}
               onVideo={openVideo}
+              onImage={openImage}
             />
           )}
         </div>
@@ -209,11 +273,13 @@ type TreeProps = {
   currentHash?: string;
   onPlay: (node: AudioNode, queue: AudioNode[]) => void;
   onVideo: (node: AudioNode | OtherNode) => void;
+  onImage: (list: OtherNode[], index: number) => void;
 };
 
 // Menggambar folder & file secara rekursif (komponen memanggil dirinya sendiri untuk isi folder).
-function TrackTree({ nodes, depth, currentHash, onPlay, onVideo }: TreeProps) {
+function TrackTree({ nodes, depth, currentHash, onPlay, onVideo, onImage }: TreeProps) {
   const siblings = nodes.filter(isAudio); // antrean putar = file audio satu folder
+  const images = nodes.filter(isImage); // galeri = gambar satu folder
   return (
     <>
       {nodes.map((node, i) => {
@@ -222,7 +288,7 @@ function TrackTree({ nodes, depth, currentHash, onPlay, onVideo }: TreeProps) {
             <details key={`${node.title}-${i}`} open={depth < 1}>
               <summary>📁 {node.title}</summary>
               <div className="indent">
-                <TrackTree nodes={node.children} depth={depth + 1} currentHash={currentHash} onPlay={onPlay} onVideo={onVideo} />
+                <TrackTree nodes={node.children} depth={depth + 1} currentHash={currentHash} onPlay={onPlay} onVideo={onVideo} onImage={onImage} />
               </div>
             </details>
           );
@@ -248,7 +314,15 @@ function TrackTree({ nodes, depth, currentHash, onPlay, onVideo }: TreeProps) {
             </button>
           );
         }
-        return null; // gambar/teks lain tidak ditampilkan
+        if (isImage(node)) {
+          return (
+            <button key={node.hash ?? `${node.title}-${i}`} type="button" className="track" onClick={() => onImage(images, images.indexOf(node))}>
+              <em>🖼 {node.title}</em>
+              <span>gambar</span>
+            </button>
+          );
+        }
+        return null; // teks dan file lain tidak ditampilkan // gambar/teks lain tidak ditampilkan
       })}
     </>
   );

@@ -75,3 +75,48 @@ export function errorResponse(e: unknown): Response {
   console.error("[error]", message);
   return Response.json({ error: message }, { status });
 }
+
+// ---------------------------------------------------------------------
+// Karya populer (barisan "Populer" di beranda).
+// Situs asli punya endpoint khusus (POST /api/recommender/popular). Kalau endpoint itu tidak
+// menjawab seperti yang diharapkan, dipakai cadangan: urut berdasarkan jumlah unduhan.
+// Hasil disimpan di memori server 30 menit supaya beranda tidak membebani situs asli.
+// ---------------------------------------------------------------------
+const POPULAR_TTL = 30 * 60_000;
+const popularCache = new Map<number, { at: number; data: WorksResponse }>();
+
+export async function fetchPopular(page = 1): Promise<WorksResponse> {
+  const hit = popularCache.get(page);
+  if (hit && Date.now() - hit.at < POPULAR_TTL) return hit.data;
+
+  let data: WorksResponse;
+  try {
+    const res = await fetch(`${UPSTREAM}/api/recommender/popular`, {
+      method: "POST",
+      headers: { ...upstreamHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        keyword: " ",
+        page,
+        pageSize: PAGE_SIZE,
+        subtitle: 0,
+        localSubtitledWorks: [],
+        withPlaylistStatus: [],
+      }),
+      signal: AbortSignal.timeout(15_000),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new UpstreamError(`Populer menjawab ${res.status}`, res.status);
+    const json = (await res.json()) as Partial<WorksResponse>;
+    if (!Array.isArray(json.works) || json.works.length === 0) throw new Error("Daftar populer kosong");
+    data = {
+      works: json.works,
+      pagination: json.pagination ?? { currentPage: page, pageSize: PAGE_SIZE, totalCount: json.works.length },
+    };
+  } catch {
+    const fallback = await fetchWorksPage({ term: "", page, order: "dl_count", subtitleOnly: false });
+    // Jaga-jaga kalau situs asli membalas dengan bentuk data yang tidak terduga.
+    data = { works: Array.isArray(fallback.works) ? fallback.works : [], pagination: fallback.pagination };
+  }
+  if (data.works.length > 0) popularCache.set(page, { at: Date.now(), data }); // jangan simpan hasil kosong
+  return data;
+}

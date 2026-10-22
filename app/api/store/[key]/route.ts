@@ -1,4 +1,4 @@
-// GET/PUT /api/store/<key> — penyimpanan data pribadi (favorit, "Tonton nanti", posisi terakhir).
+// GET/PUT /api/store/<key> — penyimpanan data pribadi (favorit, "Tonton nanti", posisi terakhir, playlist).
 //
 // Dua mode, dipilih otomatis:
 //   - Di laptop sendiri: file JSON di folder data/ (tanpa pengaturan apa pun).
@@ -9,7 +9,7 @@ import path from "node:path";
 
 export const dynamic = "force-dynamic";
 
-const KEYS = new Set(["favs", "watchlater", "positions"]);
+const KEYS = new Set(["favs", "watchlater", "positions", "playlists"]);
 const DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 const UP_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UP_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;

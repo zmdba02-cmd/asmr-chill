@@ -216,3 +216,18 @@ jadi tidak diterjemahkan ulang. Nama file/folder track belum diterjemahkan.
 
 File video dikenali dari akhiran namanya (`lib/media.ts`) dan dibuka di pemutar video di dalam detail karya,
 bukan di pemutar audio. Kalau gagal, biasanya codec-nya (mis. HEVC) tidak didukung browser.
+
+## Populer, Tag/Circle/VA, dan Playlist
+
+- **Populer**: barisan paling atas beranda (hanya saat tanpa pencarian/filter, halaman 1). Dari `POST /api/recommender/popular`
+  situs asli; kalau endpoint itu tidak menjawab, otomatis diganti urutan jumlah unduhan. Di-cache 30 menit di server
+  (`fetchPopular` di `lib/asmr.ts`).
+- **Tag** (`/tags`): tiga tab, yaitu Genre/Tag, Circle, dan Pengisi suara. Urutan: *Karya terbanyak*, *Terpopuler*, *A–Z*, plus kotak cari.
+  Daftar diambil dari `/api/tags/`, `/api/circles/`, `/api/vas/` situs asli (`lib/browse.ts`).
+  *Terpopuler* = hitungan kita sendiri: seberapa sering entri itu muncul di 60 karya populer saat ini.
+  Kalau situs tidak menyediakan jumlah karya, "Karya terbanyak" otomatis memakai urutan populer.
+- **Bisa diklik**: tag, pengisi suara, dan circle di kartu maupun detail karya langsung membuka pencarian dengan filter itu
+  (`/?inc=...`, `/?va=...`, `/?circle=...`). Filter VA/circle tampil sebagai chip di atas daftar dan bisa dihapus dengan ✕.
+- **Playlist** (`/playlists`): buat, ganti nama, hapus. Tambahkan karya lewat tombol **📂 Playlist** di detail karya
+  (satu karya boleh di banyak playlist). Tersimpan lewat penyimpanan yang sama dengan favorit (kunci `playlists`),
+  jadi permanen kalau Upstash sudah diisi.

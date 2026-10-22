@@ -9,6 +9,8 @@
 //   beberapa $tag:..$ sekaligus = AND (semua harus ada)
 //   NAMA = nama tag dalam bahasa Mandarin sederhana, persis seperti di situs
 //          (contoh: 皆大欢喜, 内射/中出). ID angka tidak berfungsi.
+//   $va:NAMA$      karya dengan pengisi suara ini (nama persis seperti di situs, mis. 本渡楓)
+//   $circle:NAMA$  karya dari circle ini
 //   kata biasa di luar $...$ = kata kunci judul / kode RJ, boleh digabung.
 // API tidak punya OR, jadi OR dibuat sendiri di lib/search.ts.
 // =====================================================================
@@ -21,6 +23,8 @@ export type Filters = {
   q: string; // kata kunci bebas
   inc: string[]; // tag yang disertakan (nama Mandarin)
   exc: string[]; // tag yang dikecualikan
+  va: string[]; // pengisi suara (nama)
+  circle: string[]; // circle / pembuat (nama)
   mode: MatchMode; // cara mencocokkan tag "inc": semua (and) atau salah satu (or)
   order: string;
   sub: boolean; // hanya yang ada subtitle
@@ -60,6 +64,8 @@ export function parseFilters(sp: RawParams): Filters {
     q: first("q").trim(),
     inc,
     exc,
+    va: normalizeTags(toArray(sp.va)),
+    circle: normalizeTags(toArray(sp.circle)),
     mode: first("mode") === "or" ? "or" : "and",
     order: ORDER_OPTIONS.some((o) => o.value === orderParam) ? orderParam : DEFAULT_ORDER,
     sub: first("sub") === "1",
@@ -73,6 +79,8 @@ export function filtersToParams(f: Omit<Filters, "page"> & { page?: number }): U
   if (f.q.trim()) params.set("q", f.q.trim());
   for (const t of f.inc) params.append("inc", t);
   for (const t of f.exc) params.append("exc", t);
+  for (const v of f.va) params.append("va", v);
+  for (const c of f.circle) params.append("circle", c);
   if (f.mode === "or") params.set("mode", "or");
   if (f.order !== DEFAULT_ORDER) params.set("order", f.order);
   if (f.sub) params.set("sub", "1");
@@ -81,8 +89,13 @@ export function filtersToParams(f: Omit<Filters, "page"> & { page?: number }): U
 }
 
 // Filters -> teks pencarian untuk API, mis. "$tag:a$ $tag:b$ $-tag:e$ kata".
-export function buildTerm({ q, inc, exc }: Pick<Filters, "q" | "inc" | "exc">): string {
-  const parts = [...inc.map((t) => `$tag:${t}$`), ...exc.map((t) => `$-tag:${t}$`)];
+export function buildTerm({ q, inc, exc, va, circle }: Pick<Filters, "q" | "inc" | "exc" | "va" | "circle">): string {
+  const parts = [
+    ...inc.map((t) => `$tag:${t}$`),
+    ...exc.map((t) => `$-tag:${t}$`),
+    ...va.map((v) => `$va:${v}$`),
+    ...circle.map((c) => `$circle:${c}$`),
+  ];
   const keyword = q.trim();
   if (keyword) parts.push(keyword);
   return parts.join(" ");

@@ -207,3 +207,53 @@ html:not([data-blur="off"]) .now-btn:hover .np-cover { filter: none; }
 .login .status { margin: 0; }
 .warn { font-size: 12px; color: #ffb86b; border: 1px solid #5a4630; border-radius: 8px; padding: 4px 8px; cursor: help; }
 .logout { display: inline; margin: 0; }
+
+/* ---------- ilustrasi omake/bonus ---------- */
+.image-panel { margin: 12px 0; }
+.image-panel .illust { display: block; width: 100%; max-height: 75vh; object-fit: contain; background: #000; border-radius: 8px; }
+html:not([data-blur="off"]) .image-panel .illust { filter: blur(14px); }
+html:not([data-blur="off"]) .image-panel .illust:hover { filter: none; }
+
+/* ---------- barisan populer & judul bagian ---------- */
+.row-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 18px 0 8px; }
+.row-head h2 { margin: 0; font-size: 18px; }
+.row-head a { color: var(--accent); font-size: 13px; }
+.grid.row { display: flex; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 10px; }
+.grid.row .card { flex: 0 0 170px; scroll-snap-align: start; }
+
+/* ---------- tag, VA, dan circle yang bisa diklik ---------- */
+a.tag:hover { color: var(--text); background: #34334a; }
+.inlink { color: inherit; text-decoration: underline dotted; text-underline-offset: 2px; }
+.inlink:hover { color: var(--accent); }
+.chips.scope { margin: 8px 0; }
+.card { position: relative; }
+.card .rm { position: absolute; top: 6px; right: 6px; padding: 2px 8px; background: rgba(20, 19, 26, .85); }
+
+/* ---------- halaman Tag / Circle / VA ---------- */
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.tabs a { padding: 8px 14px; border-radius: 999px; background: var(--panel-2); color: var(--muted); border: 1px solid #3a3950; }
+.tabs a:hover { color: var(--text); border-color: var(--accent); }
+.tabs a.on { background: var(--accent); color: #1a1530; border-color: var(--accent); }
+.browse-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); margin-top: 8px; }
+.browse-item { display: flex; flex-direction: column; gap: 2px; background: var(--panel); border: 1px solid #2c2b3b; border-radius: 10px; padding: 10px 12px; }
+.browse-item:hover { border-color: var(--accent); }
+.bi-name { font-size: 14px; overflow-wrap: anywhere; }
+.bi-meta { font-size: 12px; color: var(--muted); min-height: 1.2em; }
+.pager button:disabled { opacity: .5; cursor: default; }
+
+/* ---------- playlist ---------- */
+.plpick { margin: 4px 0; }
+.plpanel { margin-top: 6px; padding: 8px; background: var(--panel-2); border: 1px solid #3a3950; border-radius: 10px; display: grid; gap: 4px; max-height: 220px; overflow: auto; }
+.plrow { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.plrow span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.plrow em { font-style: normal; color: var(--muted); font-size: 12px; }
+.plnew { display: flex; gap: 6px; margin-top: 4px; }
+.plnew input { flex: 1; min-width: 0; padding: 4px 8px; }
+.pl-grid { display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.pl-card { background: var(--panel); border: 1px solid #2c2b3b; border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+.pl-card .body { padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+.pl-card .title { font-weight: 600; overflow-wrap: anywhere; }
+.pl-cover { display: block; }
+.cover.empty { display: grid; place-items: center; font-size: 40px; }
+.pl-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pl-actions button { padding: 4px 8px; font-size: 12px; }

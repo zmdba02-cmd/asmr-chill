@@ -87,7 +87,7 @@ async function searchAny(f: Filters): Promise<SearchResult> {
   const jobs = tags.flatMap((tag) => Array.from({ length: page }, (_, i) => ({ tag, page: i + 1 })));
   const responses = await mapLimit(jobs, 4, (job) =>
     fetchWorksPage({
-      term: buildTerm({ q: f.q, inc: [job.tag], exc: f.exc }),
+      term: buildTerm({ q: f.q, inc: [job.tag], exc: f.exc, va: f.va, circle: f.circle }),
       page: job.page,
       order: f.order,
       subtitleOnly: f.sub,

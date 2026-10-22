@@ -13,4 +13,10 @@ export const isVideoFile = (n: TrackNode): boolean =>
   n.type !== "folder" && (VIDEO_EXT.test(n.title) || VIDEO_EXT.test(n.mediaDownloadUrl?.split("?")[0] ?? ""));
 
 // Audio sungguhan: bertipe audio DAN bukan video. Dipakai untuk antrean pemutar & putar otomatis.
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
+
+// Gambar (ilustrasi omake/bonus): bertipe image, atau akhiran namanya format gambar.
+export const isImageFile = (n: TrackNode): boolean =>
+  n.type !== "folder" && n.type !== "audio" && (n.type === "image" || IMAGE_EXT.test(n.title));
+
 export const isAudioTrack = (n: TrackNode): n is AudioNode => n.type === "audio" && !isVideoFile(n);
